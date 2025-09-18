@@ -5,9 +5,8 @@
 [Introduction](#introduction)  
 [Required Environment](#required-environment)  
 [Data](#data)  
-[Quick Start](#quick_start)
-
-[Citation](#citation)
+[Quick Start](#quick-start)  
+[Citation](#citation)  
 
 
 ## Introduction
@@ -17,10 +16,10 @@ Modern agriculture demands precise genomic prediction to accelerate elite crop b
 ## Required Environment
 
 <pre> 
-#Create a new Conda virtual environment with a custom name and specify Python version   
+# Create a new Conda virtual environment with a custom name and specify Python version   
 conda create -n env_name python=3.8
 
-#activate virtual environment  
+# activate virtual environment  
 conda activate env_name  
 
 # If you would like to use FlashAttention to get faster computation speeds and lower memory costs，you can install relative packages from source
@@ -41,6 +40,7 @@ python entry.py
 Note：Before running the script, it is necessary to modify the configuration file params.ini according to your actual data situation.
 
 <pre>
+  
 [path]
   # Path to pre-trained DNABERT-2 model files
   MODEL_PATH = /mnt/inspurfs/user-fs/experiment/DNABERT-2/DNABERT-2-117M
@@ -86,11 +86,12 @@ Note：Before running the script, it is necessary to modify the configuration fi
     We collected publicly available datasets of genome-wide SNP markers and phenotypic traits for three crop datasets—rice413, rice395, and maize301. The rice413 and rice395 datasets were both sourced from [Zhao, K., Tung, CW., Eizenga, G. et al. Genome-wide association mapping reveals a rich genetic architecture of complex traits in Oryza sativa. Nat Commun 2, 467 (2011). https://doi.org/10.1038/ncomms1467](https://www.nature.com/articles/ncomms1467) The maize301 dataset was obtained from the built-in dataset in [Tassel](https://pubmed.ncbi.nlm.nih.gov/17586829/) software. The reference genome used for the rice datasets was [IRGSP-1.0](https://plants.ensembl.org/Oryza_sativa/Info/Index), while the maize dataset was based on the [B73 RefGen_v5](https://plants.ensembl.org/Zea_mays/Info/Index) reference genome.
 
 **2.Reconstructing whole-genome sequences**  
-    we developed a pipeline to reconstruct sample-specific whole-genome sequences by integrating variant data from a multi-sample Variant Call Format (VCF) file onto a reference genome. The workflow begins with essential preprocessing steps. The reference genome FASTA file is indexed via [samtools](https://github.com/samtools/samtools), and the VCF file is indexed via [bcftools](https://github.com/samtools/bcftools). These indexing procedures enable efficient, random-access lookups of genomic coordinates and variant records, which is critical for the performance of the subsequent steps.   
-    Next, a list of sample identifiers is extracted from the VCF header to enable automated, batch processing of all individuals. For each sample, a custom Python script, leveraging the [pysam](https://pypi.org/project/pysam/) and [pyfaidx](https://pypi.org/project/pyfaidx/) libraries, generates a personalized genome sequence. The script efficiently processes variants by iterating through the VCF records for a given sample. For each variant, it substitutes the reference allele with the sample-specific allele in a mutable copy of the reference sequence. The script efficiently processes variants by iterating through the VCF records for a given sample. For each variant, it substitutes the reference allele with the sample-specific allele in a mutable copy of the reference sequence.  
-    Finally, the generated FASTA files undergo a quality control (QC) check to ensure their integrity and accuracy. This QC involves programmatic validation of the FASTA format and a verification step where a random subset of variant positions in the output sequence is cross-referenced against the input VCF to confirm correct allele incorporation. The resulting high-quality whole-genome sequences provide a reliable foundation for subsequent whole-genome feature embedding.
+&emsp;&emsp;We developed a pipeline to reconstruct sample-specific whole-genome sequences by integrating variant data from a multi-sample Variant Call Format (VCF) file onto a reference genome. The workflow begins with essential preprocessing steps. The reference genome FASTA file is indexed via [samtools](https://github.com/samtools/samtools), and the VCF file is indexed via [bcftools](https://github.com/samtools/bcftools). These indexing procedures enable efficient, random-access lookups of genomic coordinates and variant records, which is critical for the performance of the subsequent steps.   
+&emsp;&emsp;Next, a list of sample identifiers is extracted from the VCF header to enable automated, batch processing of all individuals. For each sample, a custom Python script, leveraging the [pysam](https://pypi.org/project/pysam/) and [pyfaidx](https://pypi.org/project/pyfaidx/) libraries, generates a personalized genome sequence. The script efficiently processes variants by iterating through the VCF records for a given sample. For each variant, it substitutes the reference allele with the sample-specific allele in a mutable copy of the reference sequence. The script efficiently processes variants by iterating through the VCF records for a given sample. For each variant, it substitutes the reference allele with the sample-specific allele in a mutable copy of the reference sequence.  
+&emsp;&emsp;Finally, the generated FASTA files undergo a quality control (QC) check to ensure their integrity and accuracy. This QC involves programmatic validation of the FASTA format and a verification step where a random subset of variant positions in the output sequence is cross-referenced against the input VCF to confirm correct allele incorporation. The resulting high-quality whole-genome sequences provide a reliable foundation for subsequent whole-genome feature embedding.
 
 ## Quick Start
+
 <pre>
 import sys, os
 from predict_crop_phenotype import predict
@@ -102,7 +103,7 @@ cf = ConfigParser()
 cf.read('params.ini', encoding='utf-8')
 
 
-# Obtain SNP context-based feature vectors.
+# Obtain SNP context-based feature vectors
 def get_SNP_context_embedding(basedir, sampleids):
 
     context_length = cf.get('value', 'CONTEXT_LEN').split(",")
@@ -125,30 +126,29 @@ def get_whole_genome_embedding(basedir, sampleids):
 
     encode_whole_genome(basedir, sampleids, dest)
 
+  
+samppath = cf.get('path', 'SAMPLE_ID_PATH')
+sampleids = open(samppath, "r").read().splitlines()
+basedir = cf.get('path', 'FASTA_BASE_DIR')
 
+get_SNP_context_embedding(basedir, sampleids)
 
-def main():
+get_whole_genome_embedding(basedir, sampleids)
 
-    samppath = cf.get('path', 'SAMPLE_ID_PATH')
-    sampleids = open(samppath, "r").read().splitlines()
-    basedir = cf.get('path', 'FASTA_BASE_DIR')
-
-    get_SNP_context_embedding(basedir, sampleids)
-    get_whole_genome_embedding(basedir, sampleids)
-
-    trait_names = ["Panicle number per plant", "Seed number per panicle", "Amylose content", "Alkali spreading value", "Protein content", "Seed length"]
-    # trait_names = ["Amylose.Content", "HULLED.SEED.LENGTH"]
-    # trait_names = ["EarHT", "dpoll", "EarDia"]
-    predict(trait_names)  #输出每个GP模型评估结果
+trait_names = ["Panicle number per plant", "Seed number per panicle", "Amylose content", "Alkali spreading value", "Protein content", "Seed length"]
+# trait_names = ["Amylose.Content", "HULLED.SEED.LENGTH"]
+# trait_names = ["EarHT", "dpoll", "EarDia"]
+# Output the evaluation results of each GP model
+predict(trait_names)  
 
 </pre>
 
 
-## citation
-Feel free to cite us if you are interested in our work
+## Citation
+If you find our research work helpful, please cite our paper.
 <pre>
-Li, H., Cui, Y., Sun, T., Wang, T., Chen, Z., Wang, C., ... & Huang, J. (2025). Research on crop phenotype prediction using SNP context and whole-genome feature embedding. bioRxiv, 2025-04.
-  </pre>
+LI H, CUI Y, SUN T, WANG T, CHEN Z, WANG C, BIAN W, LIU J, WANG M, CHEN L, 2025. Research on crop phenotype prediction using SNP context and whole-genome feature embedding. bioRxiv: 2024-2025.
+</pre>
 
 
 
